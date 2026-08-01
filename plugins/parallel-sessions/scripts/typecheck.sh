@@ -43,6 +43,36 @@ acquire() {
   done
 }
 
+# Warn when workspace packages will resolve against a different branch.
+#
+# With a linked node_modules, internal workspace packages (@scope/*) resolve
+# against the MAIN worktree's packages/ directory, not this worktree's. If the
+# main worktree sits on another branch, tsc reads that branch's package.json
+# exports and reports phantom errors in files you never touched.
+#
+# Only warns: the setup is still worth it, but a heads-up beats an hour chasing
+# a bug that isn't yours.
+warn_branch_skew() {
+  local here main_branch here_branch
+  here=$(git rev-parse --show-toplevel 2>/dev/null) || return 0
+  [ "$here" = "$REPO" ] && return 0
+  [ -d "$here/node_modules" ] && [ ! -L "$here/node_modules" ] && return 0
+
+  # Only matters when the repo actually has workspace packages.
+  ls -d "$REPO"/packages/*/ >/dev/null 2>&1 || return 0
+
+  main_branch=$(git -C "$REPO" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  here_branch=$(git -C "$here" rev-parse --abbrev-ref HEAD 2>/dev/null)
+  [ -n "$main_branch" ] && [ -n "$here_branch" ] || return 0
+
+  if [ "$main_branch" != "$here_branch" ]; then
+    echo "note: the main worktree is on '$main_branch', this one is on '$here_branch'."
+    echo "      Workspace packages resolve against the main worktree, so unrelated"
+    echo "      'Cannot find module' errors may come from that branch, not your changes."
+  fi
+}
+
+warn_branch_skew
 acquire
 # No 'exec': it would replace the shell and the trap would never run, leaving a
 # stale lock behind.

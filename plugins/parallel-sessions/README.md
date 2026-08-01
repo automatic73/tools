@@ -91,6 +91,33 @@ One detail about that combination: the skill's setup step runs `npm install` in
 every new worktree. This plugin links `node_modules` before that happens, so the
 install finds nothing to do and the two don't conflict.
 
+## Known trade-off in workspace monorepos
+
+Sharing `node_modules` has one real consequence worth knowing before you enable
+it: internal workspace packages (`@scope/*`) resolve against the **main
+worktree's** `packages/` directory, not your worktree's.
+
+So if the main worktree sits on a different branch, `tsc` reads that branch's
+`package.json` exports, and you get errors like `Cannot find module
+'@scope/shared/utils/thing'` in files you never touched. Worse, the same command
+can pass and then fail minutes later without you changing a line, because
+somebody moved the main worktree to another branch in between.
+
+`typecheck.sh` warns when it detects that mismatch, so you don't spend an hour
+chasing a bug that isn't yours:
+
+```
+note: the main worktree is on 'feature/x', this one is on 'feature/y'.
+      Workspace packages resolve against the main worktree, so unrelated
+      'Cannot find module' errors may come from that branch, not your changes.
+```
+
+When it matters, the escape hatch is a real install for that worktree: remove
+the symlink (`rm node_modules`) and install normally. You give up the sharing for
+that worktree and keep it everywhere else.
+
+This does not affect repos without workspace packages.
+
 ## Compatibility
 
 - **Package managers**: bun, pnpm, yarn and npm. Detected from the

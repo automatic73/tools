@@ -1,7 +1,7 @@
 {
   "name": "parallel-sessions",
   "description": "Run many agent sessions in parallel without thrashing your machine: share node_modules across worktrees, serialize typechecks, and find MCP servers starting in every session.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "author": {
     "name": "Javier Olan",
     "url": "https://github.com/javikin"
