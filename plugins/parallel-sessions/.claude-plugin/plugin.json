@@ -1,13 +1,12 @@
 {
   "name": "parallel-sessions",
   "description": "Corre muchas sesiones de agente en paralelo sin saturar la maquina: comparte node_modules entre worktrees, serializa los typechecks y detecta MCP que arrancan de mas.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "Javier Olan",
     "url": "https://github.com/javikin"
   },
   "homepage": "https://github.com/automatic73/automatic73-tools/tree/main/plugins/parallel-sessions",
   "repository": "https://github.com/automatic73/automatic73-tools",
-  "license": "MIT",
-  "hooks": "./hooks/hooks.json"
+  "license": "MIT"
 }
