@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "automatic73",
+  "description": "Plugins de Claude Code hechos en automatic73, sacados de problemas reales al desarrollar con varios agentes a la vez.",
+  "owner": {
+    "name": "automatic73",
+    "url": "https://github.com/automatic73"
+  },
+  "plugins": [
+    {
+      "name": "parallel-sessions",
+      "description": "Corre muchas sesiones de agente en paralelo sin saturar la maquina: comparte node_modules entre worktrees, serializa los typechecks y detecta MCP que arrancan de mas.",
+      "source": "./plugins/parallel-sessions",
+      "category": "productivity"
+    }
+  ]
+}

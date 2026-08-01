@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/link-on-create.sh\"",
+            "timeout": 30,
+            "statusMessage": "Enlazando dependencias del worktree..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git worktree add*)",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/link-on-create.sh\"",
+            "timeout": 30,
+            "statusMessage": "Enlazando dependencias del worktree..."
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/guard-install.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
