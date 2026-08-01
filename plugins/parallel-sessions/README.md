@@ -1,39 +1,39 @@
 # parallel-sessions
 
-Corre muchas sesiones de agente a la vez sin que la máquina se arrastre.
+Run many agent sessions at once without your machine grinding to a halt.
 
-Con varios agentes trabajando en paralelo, lo que satura una laptop no suele ser
-el editor ni los agentes: son los procesos que disparan. Este plugin ataca los
-tres costos que más pesan y que nadie ve venir.
+When several agents work in parallel, what saturates a laptop usually isn't the
+editor or the agents themselves: it's the processes they spawn. This plugin
+targets the three costs that weigh the most and that nobody sees coming.
 
-## El problema, con números
+## The problem, with numbers
 
-Medido en un monorepo real (32 GB de RAM, 11 sesiones abiertas, swap al 98%):
+Measured on a real monorepo (32 GB of RAM, 11 open sessions, swap at 98%):
 
-| Fuente | Costo |
+| Source | Cost |
 |---|---|
-| `tsc --noEmit` | **2-3 GB por corrida.** Tres sesiones typecheckeando a la vez son ~9 GB de golpe |
-| `node_modules` por worktree | ~50k archivos cada uno, multiplicado por cuantos worktrees tengas, todos vigilados por watchers y Spotlight |
-| MCP heredados | Los configurados en scope global o en un **directorio padre** arrancan en toda sesión de todo proyecto. En ese caso eran 14 servidores por sesión, de un proyecto que no configuraba ninguno |
+| `tsc --noEmit` | **2-3 GB per run.** Three sessions typechecking at once is ~9 GB at a stroke |
+| `node_modules` per worktree | ~50k files each, times however many worktrees you keep, all tracked by file watchers and Spotlight |
+| Inherited MCP servers | Servers configured at global scope, or in a **parent directory**, start in every session of every project. In that case: 14 servers per session, in a project that configured none of them |
 
-## Qué hace
+## What it does
 
-**Comparte `node_modules` entre worktrees.** Cuando creas un worktree, enlaza el
-`node_modules` del principal en vez de instalar otra copia. Solo si el lockfile
-coincide: si la rama cambió dependencias, la deja con su propio install y te lo
-dice.
+**Shares `node_modules` across worktrees.** When a worktree is created, it links
+the main worktree's `node_modules` instead of installing another copy. Only when
+the lockfile matches: if the branch changed dependencies, it leaves that worktree
+with its own install and tells you.
 
-**Serializa los typechecks.** Un solo `tsc` a la vez por repo, con techo de heap.
-Los demás esperan turno en vez de pelear por la RAM.
+**Serializes typechecks.** One `tsc` at a time per repo, with a heap ceiling. The
+rest wait their turn instead of fighting over RAM.
 
-**Bloquea installs que romperían el enlace.** Correr `bun install` dentro de un
-worktree enlazado escribiría en el `node_modules` del principal y afectaría a
-todos a la vez, en silencio. El hook lo detiene y explica qué hacer.
+**Blocks installs that would break the link.** Running `bun install` inside a
+linked worktree would write into the main worktree's `node_modules` and hit every
+worktree at once, silently. The hook stops it and explains what to do.
 
-**Diagnostica.** `/parallel-sessions:diagnose` dice qué está consumiendo qué, y
-la acción concreta para cada cosa.
+**Diagnoses.** `/parallel-sessions:diagnose` tells you what is consuming what,
+and the concrete action for each.
 
-## Instalación
+## Install
 
 ```bash
 /plugin marketplace add automatic73/automatic73-tools
@@ -41,31 +41,32 @@ la acción concreta para cada cosa.
 /reload-plugins
 ```
 
-## Uso
+## Usage
 
-Los hooks trabajan solos. Lo único que cambia en tu día:
+The hooks work on their own. The only thing that changes in your day:
 
 ```bash
-# typecheck: usa esto en vez de npx tsc --noEmit
+# typecheck: use this instead of npx tsc --noEmit
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/typecheck.sh"
 
-# diagnóstico cuando sientas la máquina lenta
+# diagnose when the machine feels slow
 /parallel-sessions:diagnose
 
-# enlazar worktrees que ya existían antes de instalar el plugin
+# link worktrees that existed before you installed the plugin
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/wt-link.sh" --all
 ```
 
-Para que las sesiones usen el typecheck serializado sin que se lo recuerdes,
-ponlo en tu `CLAUDE.md`:
+So sessions use the serialized typecheck without being reminded, put it in your
+`CLAUDE.md`:
 
 ```markdown
-Typecheck: usa `bash scripts/typecheck.sh`, NUNCA `npx tsc --noEmit` directo.
+Typecheck: use `bash scripts/typecheck.sh`, NEVER `npx tsc --noEmit` directly.
 ```
 
-## Conviene además activar el enlace nativo
+## Also worth enabling: native symlinks
 
-Claude Code sabe enlazar directorios al crear worktrees. En tu `settings.json`:
+Claude Code knows how to symlink directories when creating worktrees. In your
+`settings.json`:
 
 ```json
 {
@@ -75,38 +76,36 @@ Claude Code sabe enlazar directorios al crear worktrees. En tu `settings.json`:
 }
 ```
 
-Eso cubre los worktrees que crea Claude Code. El plugin cubre además los que
-nacen de un `git worktree add` cualquiera, y evita que un install posterior
-rompa el enlace.
+That covers worktrees Claude Code creates. The plugin additionally covers ones
+born from any `git worktree add`, and keeps a later install from breaking the
+link.
 
-## Interoperabilidad
+## Interoperability
 
-Funciona junto a
-[superpowers](https://github.com/obra/superpowers), que resuelve un problema
-distinto: su skill `using-git-worktrees` **crea** el worktree (elige carpeta,
-verifica gitignore, corre el baseline de tests). Este plugin se encarga de lo que
-ese worktree **cuesta** mientras existe.
+Works alongside [superpowers](https://github.com/obra/superpowers), which solves
+a different problem: its `using-git-worktrees` skill **creates** the worktree
+(picks the directory, verifies gitignore, runs a test baseline). This plugin
+handles what that worktree **costs** while it exists.
 
-Un detalle de esa combinación: el paso de setup de esa skill corre
-`npm install` en cada worktree nuevo. Este plugin enlaza el `node_modules` antes
-de que eso ocurra, así que el install no encuentra trabajo que hacer y no hay
-conflicto.
+One detail about that combination: the skill's setup step runs `npm install` in
+every new worktree. This plugin links `node_modules` before that happens, so the
+install finds nothing to do and the two don't conflict.
 
-## Compatibilidad
+## Compatibility
 
-- **Gestores**: bun, pnpm, yarn y npm. Se detecta por el campo `packageManager`
-  de `package.json`, y si no está, por el lockfile presente.
-- **Sistemas**: macOS y Linux.
-- **Dependencias**: `git`, `bash`, `jq`. Sin `jq` los hooks se desactivan solos
-  en vez de romper la sesión.
+- **Package managers**: bun, pnpm, yarn and npm. Detected from the
+  `packageManager` field in `package.json`, falling back to the lockfile present.
+- **Systems**: macOS and Linux.
+- **Requires**: `git`, `bash`, `jq`. Without `jq` the hooks disable themselves
+  rather than breaking your session.
 
-## Configuración
+## Configuration
 
-| Variable | Default | Para qué |
+| Variable | Default | Purpose |
 |---|---|---|
-| `PS_TYPECHECK_HEAP` | `3072` | Techo de heap de `tsc`, en MB |
-| `PS_TYPECHECK_WAIT` | `1200` | Segundos máximos esperando el turno |
+| `PS_TYPECHECK_HEAP` | `3072` | `tsc` heap ceiling, in MB |
+| `PS_TYPECHECK_WAIT` | `1200` | Max seconds waiting for a turn |
 
-## Licencia
+## License
 
 MIT

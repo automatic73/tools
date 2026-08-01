@@ -1,19 +1,18 @@
 # automatic73-tools
 
-Herramientas de desarrollo hechas en
-[automatic73](https://github.com/automatic73), sacadas de problemas reales al
-trabajar con varios agentes a la vez.
+Development tooling built at [automatic73](https://github.com/automatic73), out
+of real problems from working with several coding agents at once.
 
-Hoy son plugins de Claude Code. El repo es también un marketplace, así que se
-instalan con un comando.
+Today it holds Claude Code plugins. The repo is also a marketplace, so they
+install with one command.
 
-## Instalación
+## Install
 
 ```bash
 /plugin marketplace add automatic73/automatic73-tools
 ```
 
-Luego instala el que quieras:
+Then install whichever you want:
 
 ```bash
 /plugin install parallel-sessions@automatic73
@@ -22,24 +21,24 @@ Luego instala el que quieras:
 
 ## Plugins
 
-| Plugin | Qué resuelve |
+| Plugin | What it solves |
 |---|---|
-| [parallel-sessions](plugins/parallel-sessions) | Correr muchas sesiones de agente sin saturar la máquina: comparte `node_modules` entre worktrees, serializa los typechecks y detecta MCP que arrancan de más |
+| [parallel-sessions](plugins/parallel-sessions) | Running many agent sessions without saturating the machine: shares `node_modules` across worktrees, serializes typechecks, and finds MCP servers starting in every session |
 
-## Desarrollo
+## Development
 
-Probar un plugin sin instalarlo:
+Test a plugin without installing it:
 
 ```bash
 claude --plugin-dir ./plugins/parallel-sessions
 ```
 
-Validar antes de publicar:
+Validate before publishing:
 
 ```bash
 claude plugin validate ./plugins/parallel-sessions
 ```
 
-## Licencia
+## License
 
 MIT

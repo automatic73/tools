@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
-# Enlaza los node_modules del worktree principal en un worktree secundario.
+# Links the main worktree's node_modules into a secondary worktree.
 #
-# Por que: la mayoria de gestores instalan una copia por worktree. En un monorepo
-# eso son 1-2 GB y ~50k archivos por worktree, multiplicado por cuantos tengas
-# abiertos. No es tanto el disco (APFS comparte bloques) como la presion sobre
-# los file watchers, Spotlight y el indexador del editor.
+# Why: most package managers install a separate copy per worktree. In a monorepo
+# that is 1-2 GB and ~50k files each, times however many worktrees you keep open.
+# Disk is not really the issue (APFS shares blocks anyway); the pressure on file
+# watchers, Spotlight and your editor's indexer is.
 #
-# Solo enlaza si el lockfile coincide con el del principal. Si difiere, la rama
-# cambio dependencias y necesita su propio install: avisa y no toca nada.
+# Only links when the lockfile matches the main worktree. If it differs, the
+# branch changed dependencies and needs its own install: it says so and does
+# nothing.
 #
-# Uso:
-#   wt-link.sh [ruta]        # enlaza ese worktree (default: el actual)
-#   wt-link.sh --all         # recorre todos los worktrees del repo
-#   wt-link.sh --dry-run     # muestra que haria
+# Usage:
+#   wt-link.sh [path]        # link that worktree (default: the current one)
+#   wt-link.sh --all         # walk every worktree in the repo
+#   wt-link.sh --dry-run     # show what it would do
 set -euo pipefail
 
 SELF_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -25,7 +26,7 @@ for arg in "$@"; do
     --dry-run) DRY=1 ;;
     --all)     ALL=1 ;;
     --quiet)   QUIET=1 ;;
-    -*)        echo "flag desconocido: $arg" >&2; exit 2 ;;
+    -*)        echo "unknown flag: $arg" >&2; exit 2 ;;
     *)         TARGET="$arg" ;;
   esac
 done
@@ -33,13 +34,13 @@ QUIET=${QUIET:-0}
 say() { [ "$QUIET" = "1" ] || echo "$@"; }
 
 MAIN=$(main_worktree)
-[ -n "$MAIN" ] || { echo "no estoy en un repo git" >&2; exit 1; }
+[ -n "$MAIN" ] || { echo "not inside a git repository" >&2; exit 1; }
 
 PM=$(detect_pm "$MAIN")
 LOCK=$(lockfile_for "$PM" "$MAIN")
 
-# node_modules del principal: la raiz y los de cada workspace. Se descubren en
-# vez de asumir apps/*|packages/*, que cambia entre proyectos.
+# The main worktree's node_modules: the root one plus each workspace's. These are
+# discovered rather than assumed to be apps/*|packages/*, which varies by project.
 main_module_dirs() {
   [ -d "$MAIN/node_modules" ] && echo ""
   find "$MAIN" -maxdepth 3 -type d -name node_modules -not -path "*/node_modules/*" 2>/dev/null |
@@ -55,13 +56,13 @@ link_one() {
   [ "$wt" = "$MAIN" ] && return 0
 
   if [ ! -d "$MAIN/node_modules" ]; then
-    say "⏭  $name: el worktree principal no tiene node_modules todavia"
+    say "skip  $name: the main worktree has no node_modules yet"
     return 0
   fi
 
-  # Guard: dependencias distintas => install propio.
+  # Guard: different dependencies => needs its own install.
   if [ -n "$LOCK" ] && [ -f "$wt/$LOCK" ] && ! cmp -s "$MAIN/$LOCK" "$wt/$LOCK"; then
-    say "⏭  $name: $LOCK difiere del principal, necesita su propio install"
+    say "skip  $name: $LOCK differs from main, needs its own install"
     return 0
   fi
 
@@ -72,15 +73,15 @@ link_one() {
     [ -d "$(dirname "$dst")" ] || continue
 
     if [ -d "$dst" ]; then
-      [ "$DRY" = "1" ] && { say "   [dry] reemplazaria $dst"; replaced=$((replaced+1)); continue; }
+      [ "$DRY" = "1" ] && { say "   [dry] would replace $dst"; replaced=$((replaced+1)); continue; }
       rm -rf "$dst"; replaced=$((replaced+1))
     fi
-    if [ "$DRY" = "1" ]; then say "   [dry] enlazaria $dst -> $src"
+    if [ "$DRY" = "1" ]; then say "   [dry] would link $dst -> $src"
     else ln -s "$src" "$dst"; fi
     linked=$((linked+1))
   done < <(main_module_dirs)
 
-  [ "$linked" -gt 0 ] && say "✅ $name: $linked enlaces ($replaced copias reemplazadas)"
+  [ "$linked" -gt 0 ] && say "ok    $name: $linked links ($replaced copies replaced)"
   return 0
 }
 

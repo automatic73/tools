@@ -1,39 +1,39 @@
 ---
-description: Diagnostica por que se satura la maquina al correr varias sesiones de agente en paralelo. Usar cuando el equipo va lento, swapea, se congela, o el usuario pregunta que esta consumiendo la RAM.
+description: Diagnose why the machine bogs down when running several agent sessions at once. Use when the machine is slow, swapping, or freezing, or when the user asks what is eating their RAM.
 ---
 
-# Diagnosticar saturacion
+# Diagnose resource pressure
 
-Corre el diagnostico y explica el resultado:
+Run the diagnostic and explain the result:
 
 ```bash
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/diagnose.sh"
 ```
 
-Reporta RAM por categoria, worktrees, y MCP que arrancan en cada sesion. Cada
-seccion trae la accion sugerida cuando hay algo que hacer.
+It reports RAM by category, worktree state, and MCP servers that start in every
+session. Each section ends with a concrete action when there is one to take.
 
-## Como leer la salida
+## Reading the output
 
-**El swap es la señal, no la RAM libre.** macOS reporta casi toda la RAM como
-usada por diseño (cache y compressor), asi que "0 MB libres" no significa nada.
-Un swap arriba de 70% si: ahi es donde se siente la maquina arrastrando.
+**Swap is the signal, not free RAM.** macOS reports nearly all RAM as used by
+design (cache and compressor), so "0 MB free" means nothing. Swap above 70% does:
+that is where the machine starts dragging.
 
-Sospechosos en orden de peso tipico:
+Usual suspects, heaviest first:
 
-| Señal | Que significa | Que hacer |
+| Signal | What it means | Fix |
 |---|---|---|
-| Varios `tsc` a la vez | Cada uno pesa 2-3 GB en un monorepo. Es la causa mas comun | `scripts/typecheck.sh` los serializa |
-| Muchos procesos MCP | Los MCP configurados en scope global, o en un **directorio padre**, arrancan en toda sesion de todo proyecto | Bajar a scope de proyecto los que no uses aqui |
-| Worktrees con copia propia | Cada uno son ~50k archivos que watchers y Spotlight vigilan | `scripts/wt-link.sh --all` |
-| Worktrees ya mergeados | Se acumulan solos | `git worktree remove` |
+| Several `tsc` at once | Each costs 2-3 GB in a monorepo. The most common cause | `scripts/typecheck.sh` serializes them |
+| Many MCP processes | Servers configured at global scope, or in a **parent directory**, start in every session of every project | Move the ones you don't use here to project scope |
+| Worktrees with their own copy | Each is ~50k files that watchers and Spotlight keep tracking | `scripts/wt-link.sh --all` |
+| Worktrees already merged | They pile up on their own | `git worktree remove` |
 
-## Al proponer acciones
+## When proposing actions
 
-Antes de borrar cualquier worktree, revisa que no tenga trabajo sin commitear
-(`git status`) ni commits que no esten en la rama principal. Un worktree cuyo
-git esta roto no se puede inspeccionar: no lo borres sin avisar al usuario.
+Before removing any worktree, check it has no uncommitted work (`git status`)
+and no commits missing from the main branch. A worktree whose git metadata is
+broken cannot be inspected: do not delete it without telling the user.
 
-Los cambios de configuracion de MCP solo aplican a **sesiones nuevas**. Los
-procesos de las sesiones ya abiertas siguen vivos hasta que se cierren, asi que
-no esperes que el numero baje de inmediato.
+MCP config changes only apply to **new sessions**. Servers from already-open
+sessions stay alive until those sessions close, so don't expect the count to
+drop right away.
