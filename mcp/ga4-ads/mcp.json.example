@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "analytics-mcp": {
+      "command": "analytics-mcp",
+      "env": {
+        "GOOGLE_PROJECT_ID": "oden-pos-500518"
+      }
+    },
+    "google-ads-mcp": {
+      "command": "pipx",
+      "args": [
+        "run",
+        "--spec",
+        "git+https://github.com/googleads/google-ads-mcp.git",
+        "google-ads-mcp"
+      ],
+      "env": {
+        "GOOGLE_PROJECT_ID": "oden-pos-500518",
+        "GOOGLE_ADS_DEVELOPER_TOKEN": "FROM_DOPPLER_PROJECT",
+        "GOOGLE_ADS_LOGIN_CUSTOMER_ID": "3198821992"
+      }
+    }
+  }
+}
