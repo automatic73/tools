@@ -5,9 +5,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/link-on-create.sh\"",
-            "timeout": 30,
-            "statusMessage": "Enlazando dependencias del worktree..."
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/create-worktree.sh\"",
+            "timeout": 60,
+            "statusMessage": "Creating the worktree and linking its dependencies..."
           }
         ]
       }
