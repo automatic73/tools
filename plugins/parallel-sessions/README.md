@@ -63,22 +63,31 @@ So sessions use the serialized typecheck without being reminded, put it in your
 Typecheck: use `bash scripts/typecheck.sh`, NEVER `npx tsc --noEmit` directly.
 ```
 
-## Also worth enabling: native symlinks
+## Worktrees Claude Code creates
 
-Claude Code knows how to symlink directories when creating worktrees. In your
-`settings.json`:
+`WorktreeCreate` is not a notification. When a plugin registers a hook for it,
+Claude Code stops creating the worktree itself and expects the hook to create
+it and print its path. Version 0.3.0 of this plugin treated the event as "a
+worktree was born" and printed nothing, so every agent that asked for worktree
+isolation, and every `EnterWorktree`, failed with "hook succeeded but returned
+no worktree path". Since 0.3.1 `scripts/create-worktree.sh` does the creation:
 
-```json
-{
-  "worktree": {
-    "symlinkDirectories": ["node_modules"]
-  }
-}
-```
+- the directory is `<main worktree>/.claude/worktrees/<worktree_name>`, and the
+  branch is named after the worktree, both suffixed `-2`, `-3` on collision;
+- it starts at `base_branch` when Claude Code sends one, at the session's HEAD
+  otherwise;
+- `node_modules` is linked before the path is handed back, so the first
+  command in the new worktree already finds it.
 
-That covers worktrees Claude Code creates. The plugin additionally covers ones
-born from any `git worktree add`, and keeps a later install from breaking the
-link.
+A failed `git worktree add` exits non-zero on purpose: the contract says that
+aborts the creation, which beats reporting a worktree that does not exist.
+
+Worktrees born from a plain `git worktree add` keep going through the
+`PostToolUse` hook, which only links.
+
+The `worktree.symlinkDirectories` setting in `settings.json` only applies to
+the default creation, which this hook replaces; the link above is what covers
+`node_modules` now.
 
 ## Interoperability
 
